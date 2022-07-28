@@ -1,0 +1,112 @@
+import xarray as xr
+import numpy as np
+import pandas as pd
+import esmlab
+#from ctsm_py import utils
+#import segment as sg
+import scipy                    
+from scipy import signal
+import cf_units as cf
+
+# some resources for plotting
+import matplotlib.pyplot as plt
+import cartopy
+import cartopy.crs as ccrs
+%matplotlib inline
+
+from matplotlib.pyplot import figure
+import matplotlib.ticker as mticker
+from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
+filedir1 = '/glade/p/univ/urtg0006/Brendan/clmcrop/GRAINC_TO_FOOD_NEW/offlineyr2000/'
+filedir2 = '/glade/p/univ/urtg0006/Brendan/clmcrop/yield/year2000/offline/'
+yconco2 = xr.open_dataset(filedir1+'new-conCO2-clm5.0.3-b.e21.BW.f09_g17.SSP245-TSMLT-GAUSS-DEFAULT.006.2060-2069.clm2.h1.yield.nc')
+y4515 = xr.open_dataset(filedir2+'O-45-15-6.nc')
+yconco2 = yconco2.sel(time=slice('2061-02-01', '2070-01-01'))
+carea = yconco2['area'].sel(crops=0)
+carea = carea * 100
+rarea = yconco2['area'].sel(crops=3)
+rarea = rarea * 100
+sarea = yconco2['area'].sel(crops=6)
+sarea = sarea * 100
+warea = yconco2['area'].sel(crops=9)
+warea = warea * 100
+#Control
+c4515 = y4515['yield'].sel(crops=0)
+c4515 = c4515 * carea
+c4515 = c4515.sum(dim=['lat','lon'],skipna=True)
+
+r4515 = y4515['yield'].sel(crops=3)
+r4515 = r4515 * rarea
+r4515 = r4515.sum(dim=['lat','lon'],skipna=True)
+
+s4515 = y4515['yield'].sel(crops=6)
+s4515 = s4515 * sarea
+s4515 = s4515.sum(dim=['lat','lon'],skipna=True)
+
+w4515 = y4515['yield'].sel(crops=9)
+w4515 = w4515 * warea
+w4515 = w4515.sum(dim=['lat','lon'],skipna=True)
+#constant CO2
+ccon = yconco2['yield'].sel(crops=0)
+ccon = ccon * carea
+ccon = ccon.sum(dim=['lat','lon'],skipna=True)
+
+rcon = yconco2['yield'].sel(crops=3)
+rcon = rcon * rarea
+rcon = rcon.sum(dim=['lat','lon'],skipna=True)
+
+scon = yconco2['yield'].sel(crops=6)
+scon = scon * sarea
+scon = scon.sum(dim=['lat','lon'],skipna=True)
+
+wcon = yconco2['yield'].sel(crops=9)
+wcon = wcon * warea
+wcon = wcon.sum(dim=['lat','lon'],skipna=True)
+changec = (c4515 - ccon) / (ccon)
+changec = changec * 100
+changecm = changec.mean()
+
+changer = (r4515 - rcon) / (rcon)
+changer = changer * 100
+changerm = changer.mean()
+
+changes = (s4515 - scon) / (scon)
+changes = changes * 100
+changesm = changes.mean()
+
+changew = (w4515 - wcon) / (wcon)
+changew = changew * 100
+changewm = changew.mean()
+filedir = '/glade/p/univ/urtg0006/Brendan/clmcrop/climateallscen/'
+fig = plt.figure()
+fig.set_size_inches(8,8)
+fig.subplots_adjust(hspace = 0.35)
+ax1 = fig.add_subplot(211)
+time4515 = np.linspace(2060, 2069, 9)
+ax1.plot(time4515,changec,label="Maize",color ='b',linewidth=2)
+ax1.plot(time4515,changer,label="Rice",color ='r',linewidth=2)
+ax1.plot(time4515,changes,label="Soybean",color ='y',linewidth=2)
+ax1.plot(time4515,changew,label="Spring Wheat",color ='m',linewidth=2)
+ax1.grid()
+ax1.legend(loc="upper left", prop={'size': 11})
+ax1.set_ylabel('Global Production Change (%)')
+ax1.set_xlabel('Year')
+ax1.set_ylim([0, 11])
+#ax1.ticklabel_format(style='sci', axis='y', scilimits=(8,8))
+ax1.title.set_text('Increasing Carbon Dioxide Impact on Crop Production')
+
+ax2 = fig.add_subplot(212)
+ax2.grid(linewidth=0.6, zorder=0)
+ax2.bar('Maize', changecm, color ='b',width = 0.3,zorder=3,edgecolor ='grey')
+ax2.bar('Rice', changerm, color ='r',width = 0.3,zorder=3,edgecolor ='grey')
+ax2.bar('Soybean', changesm, color ='y',width = 0.3,zorder=3,edgecolor ='grey')
+ax2.bar('Spring Wheat', changewm, color ='m',width = 0.3,zorder=3,edgecolor ='grey')
+ax2.set_ylabel("Global Production Change (%)",fontsize=10)
+ax2.title.set_text('Average Impact on Crop Production from Increasing Carbon Dioxide')
+
+ax1.text(-0.07, 1.08, 'a)', transform=ax1.transAxes, 
+            size=13)
+ax2.text(-0.07, -0.25, 'b)', transform=ax1.transAxes, 
+            size=13)
+
+plt.savefig(filedir+'/CO2_fert_effect.png', dpi = 600, bbox_inches = 'tight', pad_inches = 0.05 )
