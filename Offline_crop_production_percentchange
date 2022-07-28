@@ -1,0 +1,313 @@
+import xarray as xr
+import numpy as np
+import pandas as pd
+import esmlab
+#from ctsm_py import utils
+#import segment as sg
+import scipy                    
+from scipy import signal
+import cf_units as cf
+
+# some resources for plotting
+import matplotlib.pyplot as plt
+import cartopy
+import cartopy.crs as ccrs
+%matplotlib inline
+
+from matplotlib.pyplot import figure
+import matplotlib.ticker as mticker
+from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
+from matplotlib.ticker import AutoMinorLocator
+
+filedir = '/glade/p/univ/urtg0006/Brendan/clmcrop/yield/year2000/offline/'
+savedir = '/glade/p/univ/urtg0006/Brendan/clmcrop/yield/year2000/plots/'
+y45 = xr.open_dataset(filedir+'SSP245-AVG-COUP.b.e21.BWSSP245cmip6.f09_g17.CMIP6-SSP2-4.5-WACCM.006-007.yield.2015-2070.nc')
+y4515 = xr.open_dataset(filedir+'SSP245-15-AVG-COUP.b.e21.BW.f09_g17.SSP245-TSMLT-GAUSS-DEFAULT.006-007.clm2.h1.yield.203501-206912.nc')
+T = xr.open_dataset(filedir+'temp-AVG-clm5.0.3_new-b.e21.BWSSP245cmip6.f09_g17.CMIP6-SSP2-4.5-WACCM.006-007.temp.2060-2069.clm2.h1.yield.nc')
+P = xr.open_dataset(filedir+'precip-AVG-clm5.0.3-b.e21.BWSSP245cmip6.f09_g17.CMIP6-SSP2-4.5-WACCM.006-007.precip.2060-2069.clm2.h1.yield.nc')
+H = xr.open_dataset(filedir+'humid-AVG-clm5.0.3_new-b.e21.BWSSP245cmip6.f09_g17.CMIP6-SSP2-4.5-WACCM.006-007.humid.2060-2069.clm2.h1.yield.nc')
+R = xr.open_dataset(filedir+'radcase1-AVG-clm5.0.3-b.e21.BWSSP245cmip6.f09_g17.CMIP6-SSP2-4.5-WACCM.006-007.radcase1.2060-2069.clm2.h1.yield.nc')
+rgeo = xr.open_dataset(filedir+'radcase2-AVG-clm5.0.3-b.e21.BWSSP245cmip6.f09_g17.CMIP6-SSP2-4.5-WACCM.006-007.radcase2.2060-2069.clm2.h1.yield.nc')
+SSP245 = xr.open_dataset(filedir+'SSP245-AVG-clm5.0.3-b.e21.BWSSP245cmip6.f09_g17.CMIP6-SSP2-4.5-WACCM.006-007.2060-2069.clm2.h1.yield.nc')
+carea = y45['area'].sel(crops=0)
+cornarea = carea * 100
+rarea = y45['area'].sel(crops=3)
+ricearea = rarea * 100
+sarea = y45['area'].sel(crops=6)
+soyarea = sarea * 100
+warea = y45['area'].sel(crops=9)
+wheatarea = warea * 100
+y45 = y45.sel(time=slice('2060-02-01', '2070-01-01'))
+y4515 = y4515.sel(time=slice('2060-02-01', '2070-01-01'))
+#SSP245
+c45C = y45['yield'].sel(crops=0)
+c45C = c45C * cornarea
+c45C = c45C.sum(dim=['lat','lon'],skipna=True)
+
+r45C = y45['yield'].sel(crops=3)
+r45C = r45C * ricearea
+r45C = r45C.sum(dim=['lat','lon'],skipna=True)
+
+s45C = y45['yield'].sel(crops=6)
+s45C = s45C * soyarea
+s45C = s45C.sum(dim=['lat','lon'],skipna=True)
+
+w45C = y45['yield'].sel(crops=9)
+w45C = w45C * wheatarea
+w45C = w45C.sum(dim=['lat','lon'],skipna=True)
+
+#SSP245-15
+c4515C = y4515['yield'].sel(crops=0)
+c4515C = c4515C * cornarea
+c4515C = c4515C.sum(dim=['lat','lon'],skipna=True)
+
+r4515C = y4515['yield'].sel(crops=3)
+r4515C = r4515C * ricearea
+r4515C = r4515C.sum(dim=['lat','lon'],skipna=True)
+
+s4515C = y4515['yield'].sel(crops=6)
+s4515C = s4515C * soyarea
+s4515C = s4515C.sum(dim=['lat','lon'],skipna=True)
+
+w4515C = y4515['yield'].sel(crops=9)
+w4515C = w4515C * wheatarea
+w4515C = w4515C.sum(dim=['lat','lon'],skipna=True)
+#Maize
+c45 = SSP245['yield'].sel(crops=0)
+c45 = c45 * cornarea
+c45 = c45.sum(dim=['lat','lon'],skipna=True)
+
+ct = T['yield'].sel(crops=0)
+ct = ct * cornarea
+ct = ct.sum(dim=['lat','lon'],skipna=True)
+
+cp = P['yield'].sel(crops=0)
+cp = cp * cornarea
+cp = cp.sum(dim=['lat','lon'],skipna=True)
+
+ch = H['yield'].sel(crops=0)
+ch = ch * cornarea
+ch = ch.sum(dim=['lat','lon'],skipna=True)
+
+cr = R['yield'].sel(crops=0)
+cr = cr * cornarea
+cr = cr.sum(dim=['lat','lon'],skipna=True)
+
+crg = rgeo['yield'].sel(crops=0)
+crg = crg * cornarea
+crg = crg.sum(dim=['lat','lon'],skipna=True)
+#Rice
+r45 = SSP245['yield'].sel(crops=3)
+r45 = r45 * ricearea
+r45 = r45.sum(dim=['lat','lon'],skipna=True)
+
+rt = T['yield'].sel(crops=3)
+rt = rt * ricearea
+rt = rt.sum(dim=['lat','lon'],skipna=True)
+
+rp = P['yield'].sel(crops=3)
+rp = rp * ricearea
+rp = rp.sum(dim=['lat','lon'],skipna=True)
+
+rh = H['yield'].sel(crops=3)
+rh = rh * ricearea
+rh = rh.sum(dim=['lat','lon'],skipna=True)
+
+rr = R['yield'].sel(crops=3)
+rr = rr * ricearea
+rr = rr.sum(dim=['lat','lon'],skipna=True)
+
+rrg = rgeo['yield'].sel(crops=3)
+rrg = rrg * ricearea
+rrg = rrg.sum(dim=['lat','lon'],skipna=True)
+#Soy
+s45 = SSP245['yield'].sel(crops=6)
+s45 = s45 * soyarea
+s45 = s45.sum(dim=['lat','lon'],skipna=True)
+
+st = T['yield'].sel(crops=6)
+st = st * soyarea
+st = st.sum(dim=['lat','lon'],skipna=True)
+
+sp = P['yield'].sel(crops=6)
+sp = sp * soyarea
+sp = sp.sum(dim=['lat','lon'],skipna=True)
+
+sh = H['yield'].sel(crops=6)
+sh = sh * soyarea
+sh = sh.sum(dim=['lat','lon'],skipna=True)
+
+sr = R['yield'].sel(crops=6)
+sr = sr * soyarea
+sr = sr.sum(dim=['lat','lon'],skipna=True)
+
+srg = rgeo['yield'].sel(crops=6)
+srg = srg * soyarea
+srg = srg.sum(dim=['lat','lon'],skipna=True)
+#Wheat
+w45 = SSP245['yield'].sel(crops=9)
+w45 = w45 * wheatarea
+w45 = w45.sum(dim=['lat','lon'],skipna=True)
+
+wt = T['yield'].sel(crops=9)
+wt = wt * wheatarea
+wt = wt.sum(dim=['lat','lon'],skipna=True)
+
+wp = P['yield'].sel(crops=9)
+wp = wp * wheatarea
+wp = wp.sum(dim=['lat','lon'],skipna=True)
+
+wh = H['yield'].sel(crops=9)
+wh = wh * wheatarea
+wh = wh.sum(dim=['lat','lon'],skipna=True)
+
+wr = R['yield'].sel(crops=9)
+wr = wr * wheatarea
+wr = wr.sum(dim=['lat','lon'],skipna=True)
+
+wrg = rgeo['yield'].sel(crops=9)
+wrg = wrg * wheatarea
+wrg = wrg.sum(dim=['lat','lon'],skipna=True)
+#total
+c_tot = (c4515C - c45C) / (c45C)
+c_tot = c_tot * 100
+c_totm = c_tot.mean()
+
+r_tot = (r4515C - r45C) / (r45C)
+r_tot = r_tot * 100
+r_totm = r_tot.mean()
+
+s_tot = (s4515C - s45C) / (s45C)
+s_tot = s_tot * 100
+s_totm = s_tot.mean()
+
+w_tot = (w4515C - w45C) / (w45C)
+w_tot = w_tot * 100
+w_totm = w_tot.mean()
+
+#temp
+ct_change = (ct - c45) / (c45)
+ct_change = ct_change * 100
+ct_changem = ct_change.mean()
+
+rt_change = (rt - r45) / (r45)
+rt_change = rt_change * 100
+rt_changem = rt_change.mean()
+
+st_change = (st - s45) / (s45)
+st_change = st_change * 100
+st_changem = st_change.mean()
+
+wt_change = (wt - w45) / (w45)
+wt_change = wt_change * 100
+wt_changem = wt_change.mean()
+
+#Precip
+cp_change = (cp - c45) / (c45)
+cp_change = cp_change * 100
+cp_changem = cp_change.mean()
+
+rp_change = (rp - r45) / (r45)
+rp_change = rp_change * 100
+rp_changem = rp_change.mean()
+
+sp_change = (sp - s45) / (s45)
+sp_change = sp_change * 100
+sp_changem = sp_change.mean()
+
+wp_change = (wp - w45) / (w45)
+wp_change = wp_change * 100
+wp_changem = wp_change.mean()
+
+#Humidity
+ch_change = (ch - c45) / (c45)
+ch_change = ch_change * 100
+ch_changem = ch_change.mean()
+
+rh_change = (rh - r45) / (r45)
+rh_change = rh_change * 100
+rh_changem = rh_change.mean()
+
+sh_change = (sh - s45) / (s45)
+sh_change = sh_change * 100
+sh_changem = sh_change.mean()
+
+wh_change = (wh - w45) / (w45)
+wh_change = wh_change * 100
+wh_changem = wh_change.mean()
+
+#ratio change
+cratio_change = (crg - cr) / (cr)
+cratio_change = cratio_change * 100
+cratio_changem = cratio_change.mean()
+
+rratio_change = (rrg - rr) / (rr)
+rratio_change = rratio_change * 100
+rratio_changem = rratio_change.mean()
+
+sratio_change = (srg - sr) / (sr)
+sratio_change = sratio_change * 100
+sratio_changem = sratio_change.mean()
+
+wratio_change = (wrg - wr) / (wr)
+wratio_change = wratio_change * 100
+wratio_changem = wratio_change.mean()
+
+#Tot rad
+crad_tot = (cr - c45) / (c45)
+crad_tot = crad_tot * 100
+crad_totm = crad_tot.mean()
+
+rrad_tot = (rr - r45) / (r45)
+rrad_tot = rrad_tot * 100
+rrad_totm = rrad_tot.mean()
+
+srad_tot = (sr - s45) / (s45)
+srad_tot = srad_tot * 100
+srad_totm = srad_tot.mean()
+
+wrad_tot = (wr - w45) / (w45)
+wrad_tot = wrad_tot * 100
+wrad_totm = wrad_tot.mean()
+#LINE PLOT
+fig = plt.figure()
+fig.set_size_inches(15,10)
+ax1 = fig.add_subplot(221)
+time4515 = np.linspace(2060, 2070, 10)
+ax1.plot(time4515,st_change,label="Temp",linewidth=2)
+ax1.plot(time4515,sp_change,label="Precip",linewidth=2)
+ax1.plot(time4515,sh_change,label="Humid",linewidth=2)
+ax1.plot(time4515,sratio_change,label="Dir/Dif",linewidth=2)
+ax1.plot(time4515,srad_tot,label="Tot Rad",linewidth=2)
+ax1.plot(time4515,s_tot,label="Total",linewidth=2)
+ax1.grid()
+ax1.legend(loc="upper left", prop={'size': 11})
+ax1.set_ylabel('Global Production Change (%)')
+#ax1.set_ylim([7.5e8, 11e8])
+#ax1.ticklabel_format(style='sci', axis='y', scilimits=(8,8))
+ax1.title.set_text('Soybean')
+
+#BAR PLOT
+maize = [ct_changem, cp_changem, ch_changem, cratio_changem, crad_totm, c_totm]
+rice = [rt_changem, rp_changem, rh_changem, rratio_changem, rrad_totm, r_totm]
+soy = [st_changem, sp_changem, sh_changem, sratio_changem, srad_totm, s_totm]
+wheat = [wt_changem, wp_changem, wh_changem, wratio_changem, wrad_totm, s_totm]
+N = 6
+ind = np.arange(N)
+barWidth = 0.2
+fig = plt.subplots(figsize =(12, 8))
+plt.grid(linewidth=0.6, zorder=0)
+plt.bar(ind, maize, color ='b', width = barWidth,
+        edgecolor ='grey', label ='Maize', zorder=3)
+plt.bar(ind + barWidth, rice, color ='r', width = barWidth,
+        edgecolor ='grey', label ='Rice', zorder=3)
+plt.bar(ind + barWidth + barWidth, soy, color ='y', width = barWidth,
+        edgecolor ='grey', label ='Soybean', zorder=3)
+plt.bar(ind + barWidth + barWidth + barWidth, wheat, color ='m', width = barWidth,
+        edgecolor ='grey', label ='Spring Wheat', zorder=3)
+plt.xticks(ind + barWidth + barWidth / 2, ('Temperature', 'Precipitation', 'Specific Humidity', 'Direct/Diffuse', 'Total Radiation','Total'),fontsize=12)
+plt.legend(loc="upper center", prop={'size': 13})
+plt.axhline(y=0, color='k', linestyle='-')
+plt.ylabel("Change in Global Production (%)",fontsize=14)
+plt.title('Individual Climate Impacts from Stratospheric Aerosol Climate Intervention',fontsize=15)
+#plt.savefig(savedir+'OfflineIndvClim_BarPlot.png', dpi = 600, bbox_inches = 'tight', pad_inches = 0.05 )
