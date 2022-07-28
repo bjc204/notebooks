@@ -1,0 +1,327 @@
+###Pangeo (Python 3.6)
+import xarray as xr
+import numpy as np
+import pandas as pd
+import esmlab
+#from ctsm_py import utils
+#import segment as sg
+import scipy                    
+from scipy import signal
+import cf_units as cf
+
+# some resources for plotting
+import matplotlib.pyplot as plt
+import cartopy
+import cartopy.crs as ccrs
+%matplotlib inline
+
+from matplotlib.pyplot import figure
+import matplotlib.ticker as mticker
+from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
+
+filedir = '/glade/p/univ/urtg0006/Brendan/clmcrop/yield/year2000/'
+savedir = '/glade/p/univ/urtg0006/Brendan/clmcrop/yield/year2000/plots/'
+y45 = xr.open_dataset(filedir+'SSP245-AVG-2000.b.e21.BWSSP245cmip6.f09_g17.CMIP6-SSP2-4.5-WACCM.006-008.yield.2015-2070.nc')
+y4515 = xr.open_dataset(filedir+'SSP245-15-AVG-2000.b.e21.BW.f09_g17.SSP245-TSMLT-GAUSS-DEFAULT.006-008.clm2.h1.yield.203501-207012.nc')
+y4505 = xr.open_dataset(filedir+'SSP245-1.0-AVG.b.e21.BWSSP245.f09_g17.release-cesm2.1.3.WACCM-MA-1deg.SSP245-MA-GAUSS-LOWER-1.0.AVG.clm2.h1.yield.203501-207012.nc')
+y4510 = xr.open_dataset(filedir+'SSP245-0.5-AVG.b.e21.BWSSP245.f09_g17.release-cesm2.1.3.WACCM-MA-1deg.SSP245-MA-GAUSS-LOWER-0.5.AVG.clm2.h1.yield.203501-206912.nc')
+y34 = xr.open_dataset(filedir+'SSP534-AVG-2000.b.e21.BWSSP534oscmip6.f09_g17.CMIP6-SSP5-3.4OS-WACCM.001-003.clm2.h1.yield.204001-210012.nc')
+y3415 = xr.open_dataset(filedir+'SSP534-15-AVG-2000.b.e21.BWSSP534oscmip6.f09_g17.CMIP6-SSP5-3.4OS-WACCM.feedback.15C.001-003.clm2.h1.yield.204001-210011.nc')
+y3420 = xr.open_dataset(filedir+'SSP534-20-AVG-2000.b.e21.BWSSP534oscmip6.f09_g17.CMIP6-SSP5-3.4OS-WACCM.feedback.20C.001-003.clm2.h1.yield.203201-209912.nc')
+y85 = xr.open_dataset(filedir+'SSP585-AVG-2000.b.e21.BWSSP585cmip6.f09_g17.CMIP6-SSP5-8.5-WACCM.001-003.clm2.h1.yield.2015-2100.nc')
+y8515 = xr.open_dataset(filedir+'SSP585-15-AVG-2000.b.e21.BWSSP585cmip6.f09_g17.CMIP6-SSP5-8.5-WACCM.feedback.15C.001-003.clm2.h1.yield.2020-2100.nc')
+ysol = xr.open_dataset(filedir+'G6Solar-AVG-2000.b.e21.BWSSP585cmip6.f09_g17.CMIP6-G6solar-WACCM.001-002.clm2.h1.yield.2015-2100.nc')
+ysul = xr.open_dataset(filedir+'G6Sulfur-AVG-2000.b.e21.BWSSP585cmip6.f09_g17.CMIP6-G6sulfur-WACCM.001-002.clm2.h1.yield.2015-2100.nc')
+carea = y45['area'].sel(crops=0)
+carea = carea * 100
+rarea = y45['area'].sel(crops=3)
+rarea = rarea * 100
+sarea = y45['area'].sel(crops=6)
+sarea = sarea * 100
+warea = y45['area'].sel(crops=9)
+warea = warea * 100
+
+###Maize
+#SSP245
+c45 = y45['yield'].sel(crops=0)
+c45 = c45 * carea
+c4515 = y4515['yield'].sel(crops=0)
+c4515 = c4515 * carea
+c4510 = y4510['yield'].sel(crops=0)
+c4510 = c4510 * carea
+c4505 = y4505['yield'].sel(crops=0)
+c4505 = c4505 * carea
+c45 = c45.sum(dim=['lat','lon'],skipna=True)
+c4515 = c4515.sum(dim=['lat','lon'],skipna=True)
+c4510 = c4510.sum(dim=['lat','lon'],skipna=True)
+c4505 = c4505.sum(dim=['lat','lon'],skipna=True)
+#SSP534
+c34 = y34['yield'].sel(crops=0)
+c34 = c34 * carea
+c3415 = y3415['yield'].sel(crops=0)
+c3415 = c3415 * carea
+c3420 = y3420['yield'].sel(crops=0)
+c3420 = c3420 * carea
+c34 = c34.sum(dim=['lat','lon'],skipna=True)
+c3415 = c3415.sum(dim=['lat','lon'],skipna=True)
+c3420 = c3420.sum(dim=['lat','lon'],skipna=True)
+#SSP585
+c85 = y85['yield'].sel(crops=0)
+c85 = c85 * carea
+c8515 = y8515['yield'].sel(crops=0)
+c8515 = c8515 * carea
+csol = ysol['yield'].sel(crops=0)
+csol = csol * carea
+csul = ysul['yield'].sel(crops=0)
+csul = csul * carea
+c85 = c85.sum(dim=['lat','lon'],skipna=True)
+c8515 = c8515.sum(dim=['lat','lon'],skipna=True)
+csol = csol.sum(dim=['lat','lon'],skipna=True)
+csul = csul.sum(dim=['lat','lon'],skipna=True)
+###Rice
+#SSP245
+r45 = y45['yield'].sel(crops=3)
+r45 = r45 * rarea
+r4515 = y4515['yield'].sel(crops=3)
+r4515 = r4515 * rarea
+r4510 = y4510['yield'].sel(crops=3)
+r4510 = r4510 * rarea
+r4505 = y4505['yield'].sel(crops=3)
+r4505 = r4505 * rarea
+r45 = r45.sum(dim=['lat','lon'],skipna=True)
+r4515 = r4515.sum(dim=['lat','lon'],skipna=True)
+r4510 = r4510.sum(dim=['lat','lon'],skipna=True)
+r4505 = r4505.sum(dim=['lat','lon'],skipna=True)
+#SSP534
+r34 = y34['yield'].sel(crops=3)
+r34 = r34 * rarea
+r3415 = y3415['yield'].sel(crops=3)
+r3415 = r3415 * rarea
+r3420 = y3420['yield'].sel(crops=3)
+r3420 = r3420 * rarea
+r34 = r34.sum(dim=['lat','lon'],skipna=True)
+r3415 = r3415.sum(dim=['lat','lon'],skipna=True)
+r3420 = r3420.sum(dim=['lat','lon'],skipna=True)
+#SSP585
+r85 = y85['yield'].sel(crops=3)
+r85 = r85 * rarea
+r8515 = y8515['yield'].sel(crops=3)
+r8515 = r8515 * rarea
+rsol = ysol['yield'].sel(crops=3)
+rsol = rsol * rarea
+rsul = ysul['yield'].sel(crops=3)
+rsul = rsul * rarea
+r85 = r85.sum(dim=['lat','lon'],skipna=True)
+r8515 = r8515.sum(dim=['lat','lon'],skipna=True)
+rsol = rsol.sum(dim=['lat','lon'],skipna=True)
+rsul = rsul.sum(dim=['lat','lon'],skipna=True)
+###SOY
+#SSP245
+s45 = y45['yield'].sel(crops=6)
+s45 = s45 * sarea
+s4515 = y4515['yield'].sel(crops=6)
+s4515 = s4515 * sarea
+s4510 = y4510['yield'].sel(crops=6)
+s4510 = s4510 * sarea
+s4505 = y4505['yield'].sel(crops=6)
+s4505 = s4505 * sarea
+s45 = s45.sum(dim=['lat','lon'])
+s4515 = s4515.sum(dim=['lat','lon'],skipna=True)
+s4510 = s4510.sum(dim=['lat','lon'],skipna=True)
+s4505 = s4505.sum(dim=['lat','lon'],skipna=True)
+#SSP534
+s34 = y34['yield'].sel(crops=6)
+s34 = s34 * sarea
+s3415 = y3415['yield'].sel(crops=6)
+s3415 = s3415 * sarea
+s3420 = y3420['yield'].sel(crops=6)
+s3420 = s3420 * sarea
+s34 = s34.sum(dim=['lat','lon'],skipna=True)
+s3415 = s3415.sum(dim=['lat','lon'],skipna=True)
+s3420 = s3420.sum(dim=['lat','lon'],skipna=True)
+#SSP585
+s85 = y85['yield'].sel(crops=6)
+s85 = s85 * sarea
+s8515 = y8515['yield'].sel(crops=6)
+s8515 = s8515 * sarea
+ssol = ysol['yield'].sel(crops=6)
+ssol = ssol * sarea
+ssul = ysul['yield'].sel(crops=6)
+ssul = ssul * sarea
+s85 = s85.sum(dim=['lat','lon'],skipna=True)
+s8515 = s8515.sum(dim=['lat','lon'],skipna=True)
+ssol = ssol.sum(dim=['lat','lon'],skipna=True)
+ssul = ssul.sum(dim=['lat','lon'],skipna=True)
+###WHEAT
+#SSP245
+w45 = y45['yield'].sel(crops=9)
+w45 = w45 * warea
+w4515 = y4515['yield'].sel(crops=9)
+w4515 = w4515 * warea
+w4510 = y4510['yield'].sel(crops=9)
+w4510 = w4510 * warea
+w4505 = y4505['yield'].sel(crops=9)
+w4505 = w4505 * warea
+w45 = w45.sum(dim=['lat','lon'])
+w4515 = w4515.sum(dim=['lat','lon'],skipna=True)
+w4510 = w4510.sum(dim=['lat','lon'],skipna=True)
+w4505 = w4505.sum(dim=['lat','lon'],skipna=True)
+#SSP534
+w34 = y34['yield'].sel(crops=9)
+w34 = w34 * warea
+w3415 = y3415['yield'].sel(crops=9)
+w3415 = w3415 * warea
+w3420 = y3420['yield'].sel(crops=9)
+w3420 = w3420 * warea
+w34 = w34.sum(dim=['lat','lon'],skipna=True)
+w3415 = w3415.sum(dim=['lat','lon'],skipna=True)
+w3420 = w3420.sum(dim=['lat','lon'],skipna=True)
+#SSP585
+w85 = y85['yield'].sel(crops=9)
+w85 = w85 * warea
+w8515 = y8515['yield'].sel(crops=9)
+w8515 = w8515 * warea
+wsol = ysol['yield'].sel(crops=9)
+wsol = wsol * warea
+wsul = ysul['yield'].sel(crops=9)
+wsul = wsul * warea
+w85 = w85.sum(dim=['lat','lon'],skipna=True)
+w8515 = w8515.sum(dim=['lat','lon'],skipna=True)
+wsol = wsol.sum(dim=['lat','lon'],skipna=True)
+wsul = wsul.sum(dim=['lat','lon'],skipna=True)
+#Figure
+fig = plt.figure()
+fig.set_size_inches(15,10)
+fig.subplots_adjust(hspace = 0.35)
+
+##SSP245
+ax1 = fig.add_subplot(4, 3, 1)
+time4515 = np.linspace(2035, 2070, 35)
+ax1.plot(time4515,c45,color ='blue',label="SSP2-4.5",linewidth=2)
+ax1.plot(time4515,c4515,color ='orange',label="SSP2-4.5-1.5°C",linewidth=2)
+ax1.plot(time4515,c4510,color ='green',label="SSP2-4.5-1.0°C",linewidth=2)
+ax1.plot(time4515,c4505,color ='brown',label="SSP2-4.5-0.5°C",linewidth=2)
+ax1.grid()
+ax1.legend(loc="lower left", ncol=2, prop={'size': 10})
+ax1.set_ylabel("$\mathbf{Maize}$" + " Production (tons)", fontsize=10.5)
+ax1.set_ylim([3e8, 11e8])
+ax1.ticklabel_format(style='sci', axis='y', scilimits=(8,8))
+ax1.title.set_text("SSP2-4.5")
+
+ax4 = fig.add_subplot(4, 3, 4)
+ax4.plot(time4515,r45,color ='blue',label="SSP2-4.5",linewidth=2)
+ax4.plot(time4515,r4515,color ='orange',label="SSP2-4.5-1.5°C",linewidth=2)
+ax4.plot(time4515,r4510,color ='green',label="SSP2-4.5-1.0°C",linewidth=2)
+ax4.plot(time4515,r4505,color ='brown',label="SSP2-4.5-0.5°C",linewidth=2)
+ax4.grid()
+ax4.set_ylabel("$\mathbf{Rice}$" + " Production (tons)", fontsize=10.5)
+ax4.set_ylim([6e8, 10e8])
+ax4.ticklabel_format(style='sci', axis='y', scilimits=(8,8))
+#ax2.title.set_text('Rice')
+
+ax7 = fig.add_subplot(4, 3, 7)
+ax7.plot(time4515,s45,color ='blue',label="SSP2-4.5",linewidth=2)
+ax7.plot(time4515,s4515,color ='orange',label="SSP2-4.5-1.5°C",linewidth=2)
+ax7.plot(time4515,s4510,color ='green',label="SSP2-4.5-1.0°C",linewidth=2)
+ax7.plot(time4515,s4505,color ='brown',label="SSP2-4.5-0.5°C",linewidth=2)
+ax7.grid()
+ax7.set_ylabel("$\mathbf{Soybean}$" + " Production (tons)", fontsize=10.5)
+ax7.set_ylim([2e8, 10e8])
+ax7.ticklabel_format(style='sci', axis='y', scilimits=(8,8))
+#ax3.title.set_text('Soybean')
+
+ax10 = fig.add_subplot(4, 3, 10)
+ax10.plot(time4515,w45,color ='blue',label="SSP2-4.5",linewidth=2)
+ax10.plot(time4515,w4515,color ='orange',label="SSP2-4.5-1.5°C",linewidth=2)
+ax10.plot(time4515,w4510,color ='green',label="SSP2-4.5-1.0°C",linewidth=2)
+ax10.plot(time4515,w4505,color ='brown',label="SSP2-4.5-0.5°C",linewidth=2)
+ax10.grid()
+ax10.set_ylabel("$\mathbf{Wheat}$" + " Production (tons)", fontsize=10.5)
+ax10.set_xlabel('Year')
+ax10.set_ylim([5e8, 13e8])
+ax10.ticklabel_format(style='sci', axis='y', scilimits=(8,8))
+#ax4.title.set_text('Spring Wheat')
+
+##SSP534
+ax2 = fig.add_subplot(4, 3, 2)
+time34 = np.linspace(2040, 2099, 59)
+ax2.plot(time34,c34,color ='gold',label="SSP5-3.4-OS",linewidth=2)
+ax2.plot(time34,c3415,color ='purple',label="SSP5-3.4-1.5°C",linewidth=2)
+ax2.plot(time34,c3420,color ='slategray',label="SSP5-3.4-2.0°C",linewidth=2)
+ax2.grid()
+ax2.legend(loc="lower left", ncol=1, prop={'size': 10})
+#ax2.set_ylabel('Maize Production (tons)')
+ax2.set_ylim([3e8, 11e8])
+ax2.ticklabel_format(style='sci', axis='y', scilimits=(8,8))
+ax2.title.set_text('SSP5-3.4-OS')
+
+ax5 = fig.add_subplot(4, 3, 5)
+ax5.plot(time34,r34,color ='gold',label="SSP5-3.4-OS",linewidth=2)
+ax5.plot(time34,r3415,color ='purple',label="SSP5-3.4-1.5°C",linewidth=2)
+ax5.plot(time34,r3420,color ='slategray',label="SSP5-3.4-2.0°C",linewidth=2)
+ax5.grid()
+ax5.set_ylim([6e8, 10e8])
+ax5.ticklabel_format(style='sci', axis='y', scilimits=(8,8))
+
+ax8 = fig.add_subplot(4, 3, 8)
+ax8.plot(time34,s34,color ='gold',label="SSP5-3.4-OS",linewidth=2)
+ax8.plot(time34,s3415,color ='purple',label="SSP5-3.4-1.5°C",linewidth=2)
+ax8.plot(time34,s3420,color ='slategray',label="SSP5-3.4-2.0°C",linewidth=2)
+ax8.grid()
+ax8.set_ylim([2e8, 10e8])
+ax8.ticklabel_format(style='sci', axis='y', scilimits=(8,8))
+
+ax11 = fig.add_subplot(4, 3, 11)
+ax11.plot(time34,w34,color ='gold',label="SSP5-3.4-OS",linewidth=2)
+ax11.plot(time34,w3415,color ='purple',label="SSP5-3.4-1.5°C",linewidth=2)
+ax11.plot(time34,w3420,color ='slategray',label="SSP5-3.4-2.0°C",linewidth=2)
+ax11.grid()
+ax11.set_xlabel('Year')
+ax11.set_ylim([5e8, 13e8])
+ax11.ticklabel_format(style='sci', axis='y', scilimits=(8,8))
+
+
+##SSP85
+ax3 = fig.add_subplot(4, 3, 3)
+time85 = np.linspace(2020, 2099, 79)
+ax3.plot(time85,c85,color ='red',label="SSP5-8.5",linewidth=2)
+ax3.plot(time85,c8515,color ='deepskyblue',label="SSP5-8.5-1.5°C",linewidth=2)
+ax3.plot(time85,csol,color ='lime',label="G6Solar",linewidth=2)
+ax3.plot(time85,csul,color ='black',label="G6Sulfur",linewidth=2)
+ax3.grid()
+ax3.legend(loc="lower left", ncol=2, prop={'size': 10})
+#ax2.set_ylabel('Maize Production (tons)')
+ax3.set_ylim([3e8, 11e8])
+ax3.ticklabel_format(style='sci', axis='y', scilimits=(8,8))
+ax3.title.set_text('SSP5-8.5')
+
+ax6 = fig.add_subplot(4, 3, 6)
+ax6.plot(time85,r85,color ='red',label="SSP5-8.5",linewidth=2)
+ax6.plot(time85,r8515,color ='deepskyblue',label="SSP5-8.5-1.5°C",linewidth=2)
+ax6.plot(time85,rsol,color ='lime',label="G6Solar",linewidth=2)
+ax6.plot(time85,rsul,color ='black',label="G6Sulfur",linewidth=2)
+ax6.grid()
+ax6.set_ylim([6e8, 10e8])
+ax6.ticklabel_format(style='sci', axis='y', scilimits=(8,8))
+
+ax9 = fig.add_subplot(4, 3, 9)
+ax9.plot(time85,s85,color ='red',label="SSP5-8.5",linewidth=2)
+ax9.plot(time85,s8515,color ='deepskyblue',label="SSP5-8.5-1.5°C",linewidth=2)
+ax9.plot(time85,ssol,color ='lime',label="G6Solar",linewidth=2)
+ax9.plot(time85,ssul,color ='black',label="G6Sulfur",linewidth=2)
+ax9.grid()
+ax9.set_ylim([2e8, 10e8])
+ax9.ticklabel_format(style='sci', axis='y', scilimits=(8,8))
+
+ax12 = fig.add_subplot(4, 3, 12)
+ax12.plot(time85,w85,color ='red',label="SSP5-8.5",linewidth=2)
+ax12.plot(time85,w8515,color ='deepskyblue',label="SSP5-8.5-1.5°C",linewidth=2)
+ax12.plot(time85,wsol,color ='lime',label="G6Solar",linewidth=2)
+ax12.plot(time85,wsul,color ='black',label="G6Sulfur",linewidth=2)
+ax12.grid()
+ax12.set_xlabel('Year')
+ax12.set_ylim([5e8, 13e8])
+ax12.ticklabel_format(style='sci', axis='y', scilimits=(8,8))
+
+fig.suptitle('Global Crop Production Under Future Climate Change and Stratospheric Aerosol Climate Intervention Scenarios', size=15, y=0.94)
+plt.savefig(savedir+'subplots_production.png', dpi = 600, bbox_inches = 'tight', pad_inches = 0.05 )
