@@ -1,0 +1,177 @@
+import xarray as xr
+import numpy as np
+import pandas as pd
+import esmlab
+#from ctsm_py import utils
+#import segment as sg
+import scipy                    
+from scipy import signal
+import cf_units as cf
+
+# some resources for plotting
+import matplotlib.pyplot as plt
+import cartopy
+import cartopy.crs as ccrs
+%matplotlib inline
+
+from matplotlib.pyplot import figure
+import matplotlib.ticker as mticker
+from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
+from matplotlib.ticker import AutoMinorLocator
+import xarray.ufuncs as xrf
+from scipy import stats
+
+def ttest_1samp(a, popmean, dim):
+    """
+    This is a two-sided test for the null hypothesis that the expected value
+    (mean) of a sample of independent observations `a` is equal to the given
+    population mean, `popmean`
+    
+    Inspired here: https://github.com/scipy/scipy/blob/v0.19.0/scipy/stats/stats.py#L3769-L3846
+    
+    Parameters
+    ----------
+    a : xarray
+        sample observation
+    popmean : float or array_like
+        expected value in null hypothesis, if array_like than it must have the
+        same shape as `a` excluding the axis dimension
+    dim : string
+        dimension along which to compute test
+    
+    Returns
+    -------
+    mean : xarray
+        averaged sample along which dimension t-test was computed
+    pvalue : xarray
+        two-tailed p-value
+    """
+    n = a[dim].shape[0]
+    df = n - 1
+    a_mean = a.mean(dim)
+    d = a_mean - popmean
+    v = a.var(dim, ddof=1)
+    denom = xrf.sqrt(v / float(n))
+
+    t = d /denom
+    prob = stats.distributions.t.sf(xrf.fabs(t), df) * 2
+    prob_xa = xr.DataArray(prob, coords=a_mean.coords)
+    return a_mean, prob_xa
+
+path = '/glade/p/univ/urtg0006/Brendan/offlineoutput/NEP/'
+ssp245 = xr.open_dataset(path + 'b.e21.BWSSP245cmip6.f09_g17.CMIP6-SSP2-4.5-WACCM.AVG.clm2.h0.NEP.201501-206912.nc')
+ssp24515 = xr.open_dataset(path + 'b.e21.BW.f09_g17.SSP245-TSMLT-GAUSS-DEFAULT.AVG.clm2.h0.NEP.203501-207012.nc')
+ssp24510 = xr.open_dataset(path + 'b.e21.BWSSP245.f09_g17.release-cesm2.1.3.WACCM-MA-1deg.SSP245-MA-GAUSS-LOWER-0.5.AVG.clm2.h0.NEP.203501-206912.nc')
+ssp24505 = xr.open_dataset(path + 'b.e21.BWSSP245.f09_g17.release-cesm2.1.3.WACCM-MA-1deg.SSP245-MA-GAUSS-LOWER-1.0.AVG.clm2.h0.NEP.203501-207012.nc')
+ssp245 = ssp245.sel(time=slice('2060-02-01', '2070-01-01'))
+ssp24515 = ssp24515.sel(time=slice('2060-02-01', '2070-01-01'))
+ssp24510 = ssp24510.sel(time=slice('2060-02-01', '2070-01-01'))
+ssp24505 = ssp24505.sel(time=slice('2060-02-01', '2070-01-01'))
+ssp245 = ssp245['NEP']
+ssp24515 = ssp24515['NEP']
+ssp24510 = ssp24510['NEP']
+ssp24505 = ssp24505['NEP']
+
+dif15 = ssp24515 - ssp245
+dif15 = dif15 * 1e6
+a_mean15, prob_xa15 = ttest_1samp(dif15, 0.0, 'time')
+dif15m = dif15.mean(dim='time')
+
+dif10 = ssp24510 - ssp245
+dif10 = dif10 * 1e6
+a_mean10, prob_xa10 = ttest_1samp(dif10, 0.0, 'time')
+dif10m = dif10.mean(dim='time')
+
+dif05 = ssp24505 - ssp245
+dif05 = dif05 * 1e6
+a_mean05, prob_xa05 = ttest_1samp(dif05, 0.0, 'time')
+dif05m = dif05.mean(dim='time')
+fut_levels = np.arange(-0.8, 1.0, 0.2)
+fut_colors = ['#d7301f',
+              '#ef6548',
+              '#fc8d59',
+              '#fdbb84',
+              '#f7f7f7',
+              '#f7f7f7',
+              '#9ecae1',
+              '#6baed6',
+              '#4292c6',
+              '#2171b5',]
+#Figure
+fig = plt.figure(figsize=(10,14))
+ax1 = fig.add_subplot(3,1,1,projection=ccrs.PlateCarree())
+ax2 = fig.add_subplot(3,1,2,projection=ccrs.PlateCarree())
+ax3 = fig.add_subplot(3,1,3,projection=ccrs.PlateCarree())
+
+cb1 = dif15m.plot.contourf(ax=ax1, colors=fut_colors, levels=fut_levels, add_colorbar=False)
+ax1.coastlines()
+ax1.set_xlim(-170, 170)
+ax1.set_ylim(-60, 80)
+gl1 = ax1.gridlines(crs=ccrs.PlateCarree(), linewidth=1, color='black', alpha=0.5, linestyle='--', draw_labels=True)
+gl1.xlabels_top = False
+gl1.ylabels_left = True
+gl1.ylabels_right=False
+gl1.xlines = True
+gl1.xlocator = mticker.FixedLocator([-180, -150, -120, -90, -60, -30, 0, 30, 60, 90, 120, 150, 180])
+gl1.ylocator = mticker.FixedLocator([-90, -60, -30, 0, 30, 60, 90])
+gl1.xformatter = LONGITUDE_FORMATTER
+gl1.yformatter = LATITUDE_FORMATTER
+gl1.xlabel_style = {'color': 'black'}
+gl1.ylabel_style = {'color': 'black'}
+ax1.contourf(prob_xa15.lon.values, prob_xa15.lat.values, prob_xa15.values,
+             levels=[0.05, 1.0], colors='none', hatches=['///'],
+             transform=ccrs.PlateCarree())
+ax1.title.set_text('SSP2-4.5-1.5°C minus SSP2-4.5')
+
+
+dif10m.plot.contourf(ax=ax2, colors=fut_colors, levels=fut_levels, add_colorbar=False)
+ax2.coastlines()
+ax2.set_xlim(-170, 170)
+ax2.set_ylim(-60, 80)
+gl2 = ax2.gridlines(crs=ccrs.PlateCarree(), linewidth=1, color='black', alpha=0.5, linestyle='--', draw_labels=True)
+gl2.xlabels_top = False
+gl2.ylabels_left = True
+gl2.ylabels_right=False
+gl2.xlines = True
+gl2.xlocator = mticker.FixedLocator([-180, -150, -120, -90, -60, -30, 0, 30, 60, 90, 120, 150, 180])
+gl2.ylocator = mticker.FixedLocator([-90, -60, -30, 0, 30, 60, 90])
+gl2.xformatter = LONGITUDE_FORMATTER
+gl2.yformatter = LATITUDE_FORMATTER
+gl2.xlabel_style = {'color': 'black'}
+gl2.ylabel_style = {'color': 'black'}
+ax2.contourf(prob_xa10.lon.values, prob_xa10.lat.values, prob_xa10.values,
+             levels=[0.05, 1.0], colors='none', hatches=['///'],
+             transform=ccrs.PlateCarree())
+ax2.title.set_text('SSP2-4.5-1.0°C minus SSP2-4.5')
+
+dif05m.plot.contourf(ax=ax3, colors=fut_colors, levels=fut_levels, add_colorbar=False)
+ax3.coastlines()
+ax3.set_xlim(-170, 170)
+ax3.set_ylim(-60, 80)
+gl3 = ax3.gridlines(crs=ccrs.PlateCarree(), linewidth=1, color='black', alpha=0.5, linestyle='--', draw_labels=True)
+gl3.xlabels_top = False
+gl3.ylabels_left = True
+gl3.ylabels_right=False
+gl3.xlines = True
+gl3.xlocator = mticker.FixedLocator([-180, -150, -120, -90, -60, -30, 0, 30, 60, 90, 120, 150, 180])
+gl3.ylocator = mticker.FixedLocator([-90, -60, -30, 0, 30, 60, 90])
+gl3.xformatter = LONGITUDE_FORMATTER
+gl3.yformatter = LATITUDE_FORMATTER
+gl3.xlabel_style = {'color': 'black'}
+gl3.ylabel_style = {'color': 'black'}
+ax3.contourf(prob_xa05.lon.values, prob_xa05.lat.values, prob_xa05.values,
+             levels=[0.05, 1.0], colors='none', hatches=['///'],
+             transform=ccrs.PlateCarree())
+ax3.title.set_text('SSP2-4.5-0.5°C minus SSP2-4.5')
+
+plt.tight_layout()
+fig.subplots_adjust(bottom=0.3)
+#left-right, up-down, horizontal length, vertical length
+cbar_ax = fig.add_axes([0.17, 0.24, 0.65, 0.02])
+fig.colorbar(cb1, cax=cbar_ax, orientation='horizontal', label="GPP Difference (μg C $m^-$$^2$  $s^-$$^1$)")
+plt.subplots_adjust(hspace=0.22,top=0.965)
+fig.suptitle('NEP Impact from Different Cooling Targets (2060-2069 average)', size=14, y=0.9999)
+plt.savefig(path+'NEP_subplots_coupled.png', dpi = 600, bbox_inches = 'tight', pad_inches = 0.05 )
+
+
+    
