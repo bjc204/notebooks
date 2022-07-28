@@ -1,0 +1,158 @@
+import xarray as xr
+import numpy as np
+import pandas as pd
+import esmlab
+#from ctsm_py import utils
+#import segment as sg
+import scipy                    
+from scipy import signal
+import cf_units as cf
+
+# some resources for plotting
+import matplotlib.pyplot as plt
+import cartopy
+import cartopy.crs as ccrs
+%matplotlib inline
+
+from matplotlib.pyplot import figure
+import matplotlib.ticker as mticker
+from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
+from matplotlib.ticker import AutoMinorLocator
+
+path = '/glade/p/univ/urtg0006/Brendan/clmcrop/climateallscen/co2/'
+#CO2 files
+SSP245 = xr.open_dataset(path + 'b.e21.BW.f09_g17.SSP245-TSMLT-GAUSS-DEFAULT.001.cam.h0.CO2.203501-206912.nc')
+SSP534 = xr.open_dataset(path + 'b.e21.BWSSP534oscmip6.f09_g17.CMIP6-SSP5-3.4OS-WACCM.feedback.20C.003.cam.h0.CO2.203201-209912.nc')
+SSP585 = xr.open_dataset(path + 'b.e21.BWSSP585cmip6.f09_g17.CMIP6-SSP5-8.5-WACCM.feedback.15C.003.cam.h0.CO2.202001-210012.nc')
+SSP245 = SSP245['CO2']
+SSP245 = SSP245.sel(time=slice('2035-02-01', '2070-01-01'))
+SSP245 = SSP245.assign_coords(time = pd.date_range(start='2035-01-01', end='2070-01-01', freq='1M'))
+SSP245 = SSP245.mean(dim=['lev','lat','lon'],skipna=True)
+SSP245 = SSP245 * 1e6
+SSP245 = SSP245.resample(time='1A').mean()
+
+SSP534 = SSP534['CO2']
+SSP534 = SSP534.sel(time=slice('2035-02-01', '2070-01-01'))
+SSP534 = SSP534.assign_coords(time = pd.date_range(start='2035-01-01', end='2070-01-01', freq='1M'))
+SSP534 = SSP534.mean(dim=['lev','lat','lon'],skipna=True)
+SSP534 = SSP534 * 1e6
+SSP534 = SSP534.resample(time='1A').mean()
+
+SSP585 = SSP585['CO2']
+SSP585 = SSP585.sel(time=slice('2035-02-01', '2070-01-01'))
+SSP585 = SSP585.assign_coords(time = pd.date_range(start='2035-01-01', end='2070-01-01', freq='1M'))
+SSP585 = SSP585.mean(dim=['lev','lat','lon'],skipna=True)
+SSP585 = SSP585 * 1e6
+SSP585 = SSP585.resample(time='1A').mean()
+
+#TEMPERATURE
+filedir = '/glade/p/univ/urtg0006/Brendan/clmcrop/climateallscen/'
+in45 = xr.open_dataset(filedir+'b.e21.BWSSP245cmip6.f09_g17.CMIP6-SSP2-4.5-WACCM.AVG.clm2.h0.TSA.201501-206912.nc')
+in4515 = xr.open_dataset(filedir+'b.e21.BW.f09_g17.SSP245-TSMLT-GAUSS-DEFAULT.AVG.clm2.h0.TSA.203501-207012.nc')
+in4505 = xr.open_dataset(filedir+'b.e21.BWSSP245.f09_g17.release-cesm2.1.3.WACCM-MA-1deg.SSP245-MA-GAUSS-LOWER-1.0.AVG.clm2.h0.TSA.203501-207012.nc')
+in4510 = xr.open_dataset(filedir+'b.e21.BWSSP245.f09_g17.release-cesm2.1.3.WACCM-MA-1deg.SSP245-MA-GAUSS-LOWER-0.5.AVG.clm2.h0.TSA.203501-206912.nc')
+in34 = xr.open_dataset(filedir+'b.e21.BWSSP534oscmip6.f09_g17.CMIP6-SSP5-3.4OS-WACCM.AVG.clm2.h0.TSA.204001-210012.nc')
+in3415 = xr.open_dataset(filedir+'b.e21.BWSSP534oscmip6.f09_g17.CMIP6-SSP5-3.4OS-WACCM.feedback.15C.AVG.clm2.h0.TSA.204001-209912.nc')
+in3420 = xr.open_dataset(filedir+'b.e21.BWSSP534oscmip6.f09_g17.CMIP6-SSP5-3.4OS-WACCM.feedback.20C.AVG.clm2.h0.TSA.204001-209912.nc')
+in85 = xr.open_dataset(filedir+'b.e21.BWSSP585cmip6.f09_g17.CMIP6-SSP5-8.5-WACCM.AVG.clm2.h0.TSA.201501-210012.nc')
+in8515 = xr.open_dataset(filedir+'b.e21.BWSSP585cmip6.f09_g17.CMIP6-SSP5-8.5-WACCM.feedback.15C.AVG.clm2.h0.TSA.202001-210012.nc')
+
+t45 = in45.sel(time=slice('2035-02-01', '2070-01-01'))
+t45 = t45.assign_coords(time = pd.date_range(start='2035-01-01', end='2070-01-01', freq='1M'))
+t4515 = in4515.sel(time=slice('2035-02-01', '2070-01-01'))
+t4515 = t4515.assign_coords(time = pd.date_range(start='2035-01-01', end='2070-01-01', freq='1M'))
+t4510 = in4510.sel(time=slice('2035-02-01', '2070-01-01'))
+t4510 = t4510.assign_coords(time = pd.date_range(start='2035-01-01', end='2070-01-01', freq='1M'))
+t4505 = in4505.sel(time=slice('2035-02-01', '2070-01-01'))
+t4505 = t4505.assign_coords(time = pd.date_range(start='2035-01-01', end='2070-01-01', freq='1M'))
+t34 = in34.sel(time=slice('2040-02-01', '2070-01-01'))
+t34 = t34.assign_coords(time = pd.date_range(start='2040-01-01', end='2070-01-01', freq='1M'))
+t3415 = in3415.sel(time=slice('2040-02-01', '2070-01-01'))
+t3415 = t3415.assign_coords(time = pd.date_range(start='2040-02-01', end='2070-01-01', freq='1M'))
+t3420 = in3420.sel(time=slice('2040-02-01', '2070-01-01'))
+t3420 = t3420.assign_coords(time = pd.date_range(start='2040-01-01', end='2070-01-01', freq='1M'))
+t85 = in85.sel(time=slice('2035-02-01', '2070-01-01'))
+t85 = t85.assign_coords(time = pd.date_range(start='2035-01-01', end='2070-01-01', freq='1M'))
+t8515 = in8515.sel(time=slice('2035-02-01', '2070-01-01'))
+t8515 = t8515.assign_coords(time = pd.date_range(start='2035-01-01', end='2070-01-01', freq='1M'))
+area = in4515.area
+landfrac = in4515.landfrac
+
+arwt = area * landfrac
+arwt_norm_sum = arwt/arwt.sum()
+arwt_norm_sum.attrs['long_name'] = 'area weights normalized by sum'
+arwt_norm_sum.attrs['units'] = ''
+
+ts45 = esmlab.statistics.weighted_mean(t45.TSA, dim=('lat','lon'), weights=arwt_norm_sum)
+ts4515 = esmlab.statistics.weighted_mean(t4515.TSA, dim=('lat','lon'), weights=arwt_norm_sum)
+ts4510 = esmlab.statistics.weighted_mean(t4510.TSA, dim=('lat','lon'), weights=arwt_norm_sum)
+ts4505 = esmlab.statistics.weighted_mean(t4505.TSA, dim=('lat','lon'), weights=arwt_norm_sum)
+ts34 = esmlab.statistics.weighted_mean(t34.TSA, dim=('lat','lon'), weights=arwt_norm_sum)
+ts3415 = esmlab.statistics.weighted_mean(t3415.TSA, dim=('lat','lon'), weights=arwt_norm_sum)
+ts3420 = esmlab.statistics.weighted_mean(t3420.TSA, dim=('lat','lon'), weights=arwt_norm_sum)
+ts85 = esmlab.statistics.weighted_mean(t85.TSA, dim=('lat','lon'), weights=arwt_norm_sum)
+ts8515 = esmlab.statistics.weighted_mean(t8515.TSA, dim=('lat','lon'), weights=arwt_norm_sum)
+
+t45ym = ts45.resample(time='1A').mean()
+t45ym = t45ym - 273.15
+t4515ym = ts4515.resample(time='1A').mean()
+t4515ym = t4515ym - 273.15
+t4510ym = ts4510.resample(time='1A').mean()
+t4510ym = t4510ym - 273.15
+t4505ym = ts4505.resample(time='1A').mean()
+t4505ym = t4505ym - 273.15
+t34ym = ts34.resample(time='1A').mean()
+t34ym = t34ym - 273.15
+t3415ym = ts3415.resample(time='1A').mean()
+t3415ym = t3415ym - 273.15
+t3420ym = ts3420.resample(time='1A').mean()
+t3420ym = t3420ym - 273.15
+t85ym = ts85.resample(time='1A').mean()
+t85ym = t85ym - 273.15
+t8515ym = ts8515.resample(time='1A').mean()
+t8515ym = t8515ym - 273.15
+
+#Figure 1
+fig = plt.figure()
+fig.set_size_inches(7,7)
+fig.subplots_adjust(hspace = 0.35)
+ax1 = fig.add_subplot(2, 1, 1)
+time45 = np.linspace(2035, 2070, 35)
+ax1.plot(time45,SSP245,color ='blue',label="SSP2-4.5")
+
+#time34 = np.linspace(2032, 2100, 68)
+ax1.plot(time45,SSP534,color ='gold',label="SSP5-3.4-OS")
+
+#time85 = np.linspace(2020, 2100, 80)
+ax1.plot(time45,SSP585,color ='red',label="SSP5-8.5")
+
+plt.grid()
+plt.legend(loc="upper left")
+plt.ylabel('$CO_{2}$ (ppm)')
+plt.xlabel('Year')
+plt.title('Carbon Dioxide Concentration')
+
+ax2 = fig.add_subplot(2, 1, 2)
+ax2.plot(time45,t45ym,color ='blue')
+ax2.plot(time45,t4515ym,color ='orange',label="SSP2-4.5-1.5°C")
+ax2.plot(time45,t4510ym,color ='green',label="SSP2-4.5-1.0°C")
+ax2.plot(time45,t4505ym,color ='brown',label="SSP2-4.5-0.5°C")
+time34 = np.linspace(2040, 2070, 30)
+ax2.plot(time34,t34ym,color ='gold')
+ax2.plot(time34,t3415ym,color ='purple',label="SSP5-3.4-OS-1.5°C")
+ax2.plot(time34,t3420ym,color ='slategray',label="SSP5-3.4-OS-2.0°C")
+ax2.plot(time45,t85ym,color ='red')
+ax2.plot(time45,t8515ym,color ='deepskyblue',label="SSP5-8.5-1.5°C")
+
+ax1.text(-0.11, 1.08, 'a)', transform=ax1.transAxes, 
+            size=13)
+ax2.text(-0.11, -0.25, 'b)', transform=ax1.transAxes, 
+            size=13)
+    
+plt.grid()
+plt.legend(loc="upper left",ncol=2,fontsize=10)
+plt.ylim(9, 15)
+plt.ylabel('2-meter air temperature (°C)')
+plt.xlabel('Year')
+plt.title('Surface Air Temperature Over Land')
+#plt.savefig(filedir+'/Temp_and_CO2.png', dpi = 600, bbox_inches = 'tight', pad_inches = 0.05 )
