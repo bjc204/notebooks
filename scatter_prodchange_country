@@ -1,0 +1,115 @@
+###Pangeo (python 3.6)
+import xarray as xr
+import numpy as np
+import pandas as pd
+import esmlab
+#from ctsm_py import utils
+#import segment as sg
+import scipy                    
+from scipy import signal
+import cf_units as cf
+
+# some resources for plotting
+import matplotlib.pyplot as plt
+import cartopy
+import cartopy.crs as ccrs
+%matplotlib inline
+
+from matplotlib.pyplot import figure
+import matplotlib.ticker as mticker
+from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
+
+savedir = '/glade/p/univ/urtg0006/Brendan/clmcrop/yield/year2000/plots/'
+fig = plt.figure()
+fig.set_size_inches(16,12)
+fig.subplots_adjust(hspace = 0.35)
+##MAIZE
+ax1 = fig.add_subplot(221)
+country1 = ["1) United States","2) China","3) Brazil","4) Argentina","5) Ukraine","6) Indonesia","7) India","8) Mexico","9) Romania","10) Canada"]
+c4515 = np.array([7.39, 3.10, 18.24, 29.00, 16.04, 18.10, 23.46, 19.8, 19.46, 0.18])
+c3415 = np.array([24.06, 4.95, 32.06, 21.47, 12.1, 18.51, 26.08, 14.97, 16.72, -4.07])
+c3420 = np.array([14.81, 4.42, 19.69, 18.92, 18.92, 22.41, 14.52, 15.88, 23.55, 0.00])
+c8515 = np.array([32.06, 12.59, 40.02, 40.95, 9.60, 60.80, 42.82, 30.76, 47.80, -2.67])
+csol = np.array([16.55, 7.49, 25.90,  7.52, -10.21, 29.26, 18.14, 18.74, 27.97, -0.018])
+csul = np.array([25.18, 8.70, 18.03, 6.37, -8.82, 33.47, 23.54, 18.40, 29.36, 1.73])
+ax1.grid(zorder=0)
+ax1.scatter(country1, c4515, s=80, zorder=3, color ='orange', label="SSP2-4.5-1.5°C minus SSP2-4.5")
+ax1.scatter(country1, c3415, s=80, zorder=3, color ='purple', label="SSP5-3.4-1.5°C minus SSP5-3.4")
+ax1.scatter(country1, c3420, s=80, zorder=3, color ='slategray', label="SSP5-3.4-2.0°C minus SSP5-3.4")
+ax1.scatter(country1, c8515, s=80, zorder=3, color ='deepskyblue', label="SSP5-8.5-1.5°C minus SSP5-8.5")
+ax1.scatter(country1, csol, s=80, zorder=3, color ='lime', label="G6Solar minus SSP5-8.5")
+ax1.scatter(country1, csul, s=80, zorder=3, color ='black', label="G6Sulfur minus SSP5-8.5")
+ax1.legend(loc="lower center", ncol=2, prop={'size': 10})
+ax1.set_ylim([-40, 70])
+ax1.axhline(y=0, color='k', linestyle='-')
+ax1.set_ylabel('Change in Production (%)',fontsize=12)
+plt.setp(ax1.xaxis.get_majorticklabels(), rotation=-45, fontsize=11, ha="left")
+ax1.set_title('Maize',size=14)
+##RICE
+ax2 = fig.add_subplot(222)
+country2 = ["1) China","2) India","3) Indonesia","4) Bangladesh","5) Vietnam","6) Thailand","7) Myanmar","8) Philippines","9) Brazil","10) Pakistan"]
+r4515 = np.array([4.60, 8.66, 3.10, 20.04, 7.31, 5.00, 14.89, 0.57, 7.59, 8.55])
+r3415 = np.array([7.20, 3.95, 3.83, 12.9, 10.66, 16.00, 7.57, -14.00, 15.79, 6.53])
+r3420 = np.array([9.24, 4.19, 6.09, 8.23, 6.78, 9.93, 27.04, -7.38, 10.60, 4.67])
+r8515 = np.array([16.97, 7.87, 11.75, 19.75, 15.79, 9.07, 14.62, -0.64, 15.91, 3.50])
+rsol = np.array([9.39, 3.39, 7.20, 13.40, 6.02, 10.75, 5.11, 12.44, 14.55, -3.34])
+rsul = np.array([10.01, 4.86, 10.50, 14.33, 10.89, -1.88, 4.78, 12.69, 13.58, -0.50])
+ax2.grid(zorder=0)
+ax2.scatter(country2, r4515, s=80, zorder=3, color ='orange', label="SSP2-4.5-1.5°C minus SSP2-4.5")
+ax2.scatter(country2, r3415, s=80, zorder=3, color ='purple', label="SSP5-3.4-1.5°C minus SSP5-3.4")
+ax2.scatter(country2, r3420, s=80, zorder=3, color ='slategray', label="SSP5-3.4-2.0°C minus SSP5-3.4")
+ax2.scatter(country2, r8515, s=80, zorder=3, color ='deepskyblue', label="SSP5-8.5-1.5°C minus SSP5-8.5")
+ax2.scatter(country2, rsol, s=80, zorder=3, color ='lime', label="G6Solar minus SSP5-8.5")
+ax2.scatter(country2, rsul, s=80, zorder=3, color ='black', label="G6Sulfur minus SSP5-8.5")
+#ax1.legend(loc="lower center", ncol=2, prop={'size': 10})
+#ax1.set_ylim([-40, 65])
+ax2.axhline(y=0, color='k', linestyle='-')
+ax2.set_ylabel('Change in Production (%)',fontsize=12)
+plt.setp(ax2.xaxis.get_majorticklabels(), rotation=-45, fontsize=11, ha="left")
+ax2.set_title('Rice',size=14)
+##SOYBEAN
+ax3 = fig.add_subplot(223)
+country3 = ["1) United States","2) Brazil","3) Argentina","4) China","5) India","6) Paraguay","7) Canada","8) Ukraine","9) Russia","10) Bolivia"]
+s4515 = np.array([10.38, 26.47, 64.26,  5.69, 20.28, 21.45, 3.23, 32.21, -7.80, 43.06])
+s3415 = np.array([30.45, 53.89, 19.22, 5.63, 30.39, 40.80, 6.67, 21.09, -16.08, 64.42])
+s3420 = np.array([19.17, 35.5, 26.22, 8.01, 14.55, 27.07, 7.14, 33.31, -3.49, 38.60])
+s8515 = np.array([54.19, 41.06, 48.06, 18.01, 48.16, 58.81, 6.64, 49.56, 0.07, 68.55])
+ssol = np.array([26.79, 23.43, 23.75, 6.62, 14.37, 2.29, 7.17, 16.14, -1.36, 48.38])
+ssul = np.array([37.16, 7.37, 7.23, 9.23, 24.23, -9.60, 6.62, 20.95, 2.76, 19.97])
+ax3.grid(zorder=0)
+ax3.scatter(country3, s4515, s=80, zorder=3, color ='orange', label="SSP2-4.5-1.5°C minus SSP2-4.5")
+ax3.scatter(country3, s3415, s=80, zorder=3, color ='purple', label="SSP5-3.4-1.5°C minus SSP5-3.4")
+ax3.scatter(country3, s3420, s=80, zorder=3, color ='slategray', label="SSP5-3.4-2.0°C minus SSP5-3.4")
+ax3.scatter(country3, s8515, s=80, zorder=3, color ='deepskyblue', label="SSP5-8.5-1.5°C minus SSP5-8.5")
+ax3.scatter(country3, ssol, s=80, zorder=3, color ='lime', label="G6Solar minus SSP5-8.5")
+ax3.scatter(country3, ssul, s=80, zorder=3, color ='black', label="G6Sulfur minus SSP5-8.5")
+#ax1.legend(loc="lower center", ncol=2, prop={'size': 10})
+ax3.set_ylim([-20, 70])
+ax3.axhline(y=0, color='k', linestyle='-')
+ax3.set_ylabel('Change in Production (%)',fontsize=12)
+plt.setp(ax3.xaxis.get_majorticklabels(), rotation=-45, fontsize=11, ha="left")
+ax3.set_title('Soybean',size=14)
+##SPRING WHEAT
+ax4 = fig.add_subplot(224)
+country4 = ["1) China","2) India","3) Russia","4) United States","5) France","6) Canada","7) Pakistan","8) Ukraine","9) Australia","10) Germany"]
+w4515 = np.array([7.10, 9.80, 17.77, -7.52, 10.14, -7.27, 14.45, 41.91, 16.11, 8.99])
+w3415 = np.array([14.2, 4.89, -18.18, 9.37, 10.13, 15.36, 3.37, -8.41, 29.44, 7.46])
+w3420 = np.array([9.72, 1.66, -5.07, 8.36, 10.5, 8.09, 3.39, 3.62, 4.44, 7.13])
+w8515 = np.array([20.95, -0.89, -4.72, 15.8, 26.91, 42.8, 6.94, 18.45, 35.44, 17.85])
+wsol = np.array([8.42, -5.23, -10.39, 1.00, 11.13, 19.55, -1.53, -8.15, 1.07, 6.92])
+wsul = np.array([9.84, 0.36, -0.60, 7.25, 11.58, 18.50, 3.19, -5.01, 9.50, 10.74])
+ax4.grid(zorder=0)
+ax4.scatter(country4, w4515, s=80, zorder=3, color ='orange', label="SSP2-4.5-1.5°C minus SSP2-4.5")
+ax4.scatter(country4, w3415, s=80, zorder=3, color ='purple', label="SSP5-3.4-1.5°C minus SSP5-3.4")
+ax4.scatter(country4, w3420, s=80, zorder=3, color ='slategray', label="SSP5-3.4-2.0°C minus SSP5-3.4")
+ax4.scatter(country4, w8515, s=80, zorder=3, color ='deepskyblue', label="SSP5-8.5-1.5°C minus SSP5-8.5")
+ax4.scatter(country4, wsol, s=80, zorder=3, color ='lime', label="G6Solar minus SSP5-8.5")
+ax4.scatter(country4, wsul, s=80, zorder=3, color ='black', label="G6Sulfur minus SSP5-8.5")
+#ax1.legend(loc="lower center", ncol=2, prop={'size': 10})
+#ax4.set_ylim([-20, 70])
+ax4.axhline(y=0, color='k', linestyle='-')
+ax4.set_ylabel('Change in Production (%)',fontsize=12)
+plt.setp(ax4.xaxis.get_majorticklabels(), rotation=-45, fontsize=11, ha="left")
+ax4.set_title('Spring Wheat',size=14)
+fig.suptitle('Change in Production for Top 10 Producers Under Stratospheric Aerosol Climate Intervention (2060-2069 avg.)', size=15, y=0.93)
+plt.savefig(savedir+'Scatter_Country.png', dpi = 600, bbox_inches = 'tight', pad_inches = 0.05 )
